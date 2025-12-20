@@ -26,8 +26,8 @@ public:
             WaitForPacket();
 
             return true;
-        } catch (std::exception& e) {
-            std::cout << "[UDP CLIENT] Start Error: " << ec.message() << "\n";
+        } catch (std::exception& ec) {
+            std::cout << "[UDP CLIENT] Start Error: " << ec.what() << "\n";
             return false;
         }
     }
