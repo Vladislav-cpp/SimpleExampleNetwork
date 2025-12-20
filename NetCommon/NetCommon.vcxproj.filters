@@ -45,7 +45,7 @@
     <ClInclude Include="net_common.h">
       <Filter>Header Files\Common</Filter>
     </ClInclude>
-    <ClInclude Include="net_udpClient.h">
+    <ClInclude Include="net_udpСlient.h">
       <Filter>Header Files\udp</Filter>
     </ClInclude>
     <ClInclude Include="net_udpServer.h">
