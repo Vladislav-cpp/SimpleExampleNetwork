@@ -12,10 +12,10 @@ enum class CustomMsgTypes : uint32_t
 
 
 
-class CustomServer : public net::tcpServerInterface<CustomMsgTypes>
+class CustomServer : public net::tcp_server<CustomMsgTypes>
 {
 public:
-	CustomServer(uint16_t nPort) : net::tcpServerInterface<CustomMsgTypes>(nPort)
+	CustomServer(uint16_t nPort) : net::tcp_server<CustomMsgTypes>(nPort)
 	{
 
 	}

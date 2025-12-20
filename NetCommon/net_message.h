@@ -1,9 +1,7 @@
 #pragma once
 #include "net_common.h"
 
-
-namespace net
-{
+namespace net {
 	///[OLC_HEADERIFYIER] START "MESSAGE"
 
 	// Message Header is sent at start of all messages. The template allows us
@@ -101,8 +99,7 @@ namespace net
 	class tcp—onnection;
 
 	template <typename T>
-	struct tcpOwned_message
-	{
+	struct tcpOwned_message {
 		std::shared_ptr<tcp—onnection<T>> remote = nullptr;
 		message<T> msg;
 
@@ -115,9 +112,8 @@ namespace net
 	};
 
 	template <typename T>
-	struct udpOwned_message
-	{
-		asio::ip::udp::endpoint remoteEndpoint;
+	struct udpOwned_message {
+		std::shared_ptr<asio::ip::udp::endpoint> remoteEndpoint;
 		message<T> msg;
 
 		// Again, a friendly string maker
@@ -128,5 +124,32 @@ namespace net
 		}
 	};
 
+	template<typename T>
+	struct client_ref {
+		client_ref() = default;
+
+		client_ref(std::shared_ptr<tcp—onnection<T>> p) : ptr(p) {}
+
+		client_ref(std::shared_ptr<asio::ip::udp::endpoint> p) : ptr(p) {}
+
+
+		bool isTcp() const { return ptr.index() == 0; }
+
+		template<typename U>
+		U* as() const {
+			return std::get<std::shared_ptr<U>>(ptr).get();
+		}
+
+		tcp—onnection<T>* operator->() const {
+			return std::get<0>(ptr).get();
+		}
+
+		std::variant<
+			std::shared_ptr<tcp—onnection<T>>, 
+			std::shared_ptr<asio::ip::udp::endpoint>
+		> ptr;
+	};
+
+
 	///[OLC_HEADERIFYIER] END "MESSAGE"
-}
+} // net 

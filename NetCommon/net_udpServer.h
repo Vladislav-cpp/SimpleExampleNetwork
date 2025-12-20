@@ -69,18 +69,42 @@ private:
         }
     }
 
+    void Update(size_t nMaxMessages = -1, bool bWait = false) {
+        if(bWait) m_qMessagesIn.wait();
+
+        size_t nMessageCount = 0;
+        while(nMessageCount < nMaxMessages && !m_qMessagesIn.empty()) {
+            auto msg = m_qMessagesIn.pop_front();
+
+            // Передаємо в обробник (адреса клієнта + саме повідомлення)
+            OnMessage(msg.remoteEndpoint, msg.msg);
+            OnMessage(client_ref<T>(msg.remoteEndpoint), msg.msg);
+            nMessageCount++;
+        }
+    }
+
+protected:
+
+    virtual void OnMessage(const asio::ip::udp::endpoint& client, message<T>& msg) {}
+
+	virtual void OnMessage(const client_ref<T>& client, message<T>& msg) {}
+
+
 private:
     void WaitForPacket() {
         auto vBuffer = std::make_shared<std::vector<uint8_t>>(1024);
 
+        if( !m_remoteEndpoint ) m_remoteEndpoint = std::make_shared<asio::ip::udp::endpoint>();
+
+
         m_socket.async_receive_from(
-            asio::buffer(vBuffer->data(), vBuffer->size()), m_remoteEndpoint,
+            asio::buffer(vBuffer->data(), vBuffer->size()), *m_remoteEndpoint,
             [this, vBuffer](std::error_code ec, std::size_t length) {
                 if(!ec) {
 
-                    if (m_clients.find(m_remoteEndpoint) == m_clients.end()) {
-                        std::cout << "[UDP] New client: " << m_remoteEndpoint << "\n";
-                        m_clients.insert(m_remoteEndpoint);
+                    if (m_clients.find(*m_remoteEndpoint) == m_clients.end()) {
+                        std::cout << "[UDP] New client: " << *m_remoteEndpoint << "\n";
+                        m_clients.insert(*m_remoteEndpoint);
                     }
 
                     message<T> msg;
@@ -121,7 +145,7 @@ protected:
     std::thread m_threadContext;
 
     asio::ip::udp::socket m_socket;
-    asio::ip::udp::endpoint m_remoteEndpoint;
+    std::shared_ptr<asio::ip::udp::endpoint> m_remoteEndpoint;
 
     std::set<asio::ip::udp::endpoint> m_clients;
 

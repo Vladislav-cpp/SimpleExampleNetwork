@@ -10,12 +10,12 @@
 namespace net {
 
 template<typename T>
-class tcpServerInterface {
+class tcp_server {
 	public:
 	// Create a server, ready to listen on specified port
-	tcpServerInterface(uint16_t port) : m_asioAcceptor(m_asioContext, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port)) {}
+	tcp_server(uint16_t port) : m_asioAcceptor(m_asioContext, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port)) {}
 
-	virtual ~tcpServerInterface() {
+	virtual ~tcp_server() {
 		// May as well try and tidy up
 		Stop();
 	}
@@ -83,7 +83,7 @@ class tcpServerInterface {
 							
 
 					// Give the user server a chance to deny connection
-					if (OnClientConnect(newconn)) {								
+					if( OnClientConnect(newconn) ) {								
 						// Connection allowed, so add to container of new connections
 						m_deqConnections.push_back(std::move(newconn));
 
@@ -92,7 +92,7 @@ class tcpServerInterface {
 						m_deqConnections.back()->ConnectToClient(nIDCounter++);
 
 						std::cout << "[" << m_deqConnections.back()->GetID() << "] Connection Approved\n";
-					}else {
+					} else {
 						std::cout << "[-----] Connection Denied\n";
 
 						// Connection will go out of scope with no pending tasks, so will
@@ -168,6 +168,9 @@ class tcpServerInterface {
 
 			// Pass to message handler
 			OnMessage(msg.remote, msg.msg);
+			OnMessage(client_ref<T>(msg.remote), msg.msg);
+
+			
 
 			nMessageCount++;
 		}
@@ -185,6 +188,8 @@ class tcpServerInterface {
 
 	// Called when a message arrives
 	virtual void OnMessage(std::shared_ptr<tcpÑonnection<T>> client, message<T>& msg) {}
+
+	virtual void OnMessage(const client_ref<T>& client, message<T>& msg) {}
 
 
 	protected:
