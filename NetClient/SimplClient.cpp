@@ -1,5 +1,5 @@
 #include <iostream>
-#include <olc_net.h>
+#include <net_all.h>
 
 enum class CustomMsgTypes : uint32_t
 {
@@ -12,7 +12,7 @@ enum class CustomMsgTypes : uint32_t
 
 
 
-class CustomClient : public net::client_interface<CustomMsgTypes>
+class CustomClient : public net::tcp—lientInterface<CustomMsgTypes>
 {
 public:
 	void PingServer()	

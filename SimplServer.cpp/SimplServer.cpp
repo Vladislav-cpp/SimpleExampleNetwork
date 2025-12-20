@@ -1,5 +1,5 @@
 #include <iostream>
-#include <olc_net.h>
+#include <net_all.h>
 
 enum class CustomMsgTypes : uint32_t
 {
@@ -12,16 +12,16 @@ enum class CustomMsgTypes : uint32_t
 
 
 
-class CustomServer : public net::server_interface<CustomMsgTypes>
+class CustomServer : public net::tcpServerInterface<CustomMsgTypes>
 {
 public:
-	CustomServer(uint16_t nPort) : net::server_interface<CustomMsgTypes>(nPort)
+	CustomServer(uint16_t nPort) : net::tcpServerInterface<CustomMsgTypes>(nPort)
 	{
 
 	}
 
 protected:
-	virtual bool OnClientConnect(std::shared_ptr<net::connection<CustomMsgTypes>> client)
+	virtual bool OnClientConnect(std::shared_ptr<net::tcpÑonnection<CustomMsgTypes>> client)
 	{
 		net::message<CustomMsgTypes> msg;
 		msg.header.id = CustomMsgTypes::ServerAccept;
@@ -30,13 +30,13 @@ protected:
 	}
 
 	// Called when a client appears to have disconnected
-	virtual void OnClientDisconnect(std::shared_ptr<net::connection<CustomMsgTypes>> client)
+	virtual void OnClientDisconnect(std::shared_ptr<net::tcpÑonnection<CustomMsgTypes>> client)
 	{
 		std::cout << "Removing client [" << client->GetID() << "]\n";
 	}
 
 	// Called when a message arrives
-	virtual void OnMessage(std::shared_ptr<net::connection<CustomMsgTypes>> client, net::message<CustomMsgTypes>& msg)
+	virtual void OnMessage(std::shared_ptr<net::tcpÑonnection<CustomMsgTypes>> client, net::message<CustomMsgTypes>& msg)
 	{
 		switch (msg.header.id)
 		{

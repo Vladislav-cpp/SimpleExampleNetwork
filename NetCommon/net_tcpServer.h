@@ -3,18 +3,19 @@
 #include "net_common.h"
 #include "net_tsqueue.h"
 #include "net_message.h"
-#include "net_connection.h"
+#include "net_tcp—onnection.h"
+#include <vector>
 
 
 namespace net {
 
 template<typename T>
-class server_interface {
+class tcpServerInterface {
 	public:
 	// Create a server, ready to listen on specified port
-	server_interface(uint16_t port) : m_asioAcceptor(m_asioContext, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port)) {}
+	tcpServerInterface(uint16_t port) : m_asioAcceptor(m_asioContext, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port)) {}
 
-	virtual ~server_interface() {
+	virtual ~tcpServerInterface() {
 		// May as well try and tidy up
 		Stop();
 	}
@@ -39,7 +40,7 @@ class server_interface {
 					std::cerr << "ASIO thread exception: " << e.what() << "\n";
 				}
 			});
-		}catch (std::exception& e) {
+		} catch(std::exception& e) {
 			// Something prohibited the server from listening
 			std::cerr << "[SERVER] Exception: " << e.what() << "\n";
 			return false;
@@ -55,7 +56,7 @@ class server_interface {
 		m_asioContext.stop();
 
 		// Tidy up the context thread
-		if (m_threadContext.joinable()) m_threadContext.join();
+		if( m_threadContext.joinable() ) m_threadContext.join();
 
 		// Inform someone, anybody, if they care...
 		std::cout << "[SERVER] Stopped!\n";
@@ -75,8 +76,8 @@ class server_interface {
 					std::cout << "[SERVER] New Connection: " << socket.remote_endpoint() << "\n";
 
 					// Create a new connection to handle this client 
-					std::shared_ptr<connection<T>> newconn = 
-						std::make_shared<connection<T>>(connection<T>::owner::server, 
+					std::shared_ptr<tcp—onnection<T>> newconn = 
+						std::make_shared<tcp—onnection<T>>(tcp—onnection<T>::owner::server, 
 							m_asioContext, std::move(socket), m_qMessagesIn);
 							
 							
@@ -109,7 +110,7 @@ class server_interface {
 	}
 
 	// Send a message to a specific client
-	void MessageClient(std::shared_ptr<connection<T>> client, const message<T>& msg) {
+	void MessageClient(std::shared_ptr<tcp—onnection<T>> client, const message<T>& msg) {
 		// Check client is legitimate...
 		if( client && client->IsConnected() ) {
 			// ...and post the message via the connection
@@ -124,13 +125,12 @@ class server_interface {
 			client.reset();
 
 			// Then physically remove it from the container
-			m_deqConnections.erase(
-				std::remove(m_deqConnections.begin(), m_deqConnections.end(), client), m_deqConnections.end());
+			m_deqConnections.erase( std::remove(m_deqConnections.begin(), m_deqConnections.end(), client), m_deqConnections.end() );
 		}
 	}
 			
 	// Send message to all clients
-	void MessageAllClients(const message<T>& msg, std::shared_ptr<connection<T>> pIgnoreClient = nullptr) {
+	void MessageAllClients(const message<T>& msg, std::shared_ptr<tcp—onnection<T>> pIgnoreClient = nullptr) {
 		bool bInvalidClientExists = false;
 
 		// Iterate through all clients in container
@@ -178,21 +178,21 @@ class server_interface {
 	// customised functionality
 
 	// Called when a client connects, you can veto the connection by returning false
-	virtual bool OnClientConnect(std::shared_ptr<connection<T>> client) { return true; }
+	virtual bool OnClientConnect(std::shared_ptr<tcp—onnection<T>> client) { return true; }
 
 	// Called when a client appears to have disconnected
-	virtual void OnClientDisconnect(std::shared_ptr<connection<T>> client) {}
+	virtual void OnClientDisconnect(std::shared_ptr<tcp—onnection<T>> client) {}
 
 	// Called when a message arrives
-	virtual void OnMessage(std::shared_ptr<connection<T>> client, message<T>& msg) {}
+	virtual void OnMessage(std::shared_ptr<tcp—onnection<T>> client, message<T>& msg) {}
 
 
 	protected:
 	// Thread Safe Queue for incoming message packets
-	tsqueue<owned_message<T>> m_qMessagesIn;
+	tsqueue<tcpOwned_message<T>> m_qMessagesIn;
 
 	// Container of active validated connections
-	std::deque<std::shared_ptr<connection<T>>> m_deqConnections;
+	std::deque<std::shared_ptr<tcp—onnection<T>>> m_deqConnections;
 
 	// Order of declaration is important - it is also the order of initialisation
 	asio::io_context m_asioContext;

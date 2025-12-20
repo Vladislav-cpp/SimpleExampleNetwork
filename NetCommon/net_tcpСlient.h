@@ -4,12 +4,12 @@
 namespace net {
 
 template <typename T>
-class client_interface {
+class tcp—lientInterface {
 	public:
-	client_interface() 
+	tcp—lientInterface() 
 	{}
 
-	virtual ~client_interface()
+	virtual ~tcp—lientInterface()
 	{
 		// If the client is destroyed, always try and disconnect from server
 		Disconnect();
@@ -24,7 +24,7 @@ class client_interface {
 			asio::ip::tcp::resolver::results_type endpoints = resolver.resolve(host, std::to_string(port));
 
 			// Create connection
-			m_connection = std::make_unique<connection<T>>(connection<T>::owner::client, m_context, asio::ip::tcp::socket(m_context), m_qMessagesIn);
+			m_connection = std::make_unique<tcp—onnection<T>>(tcp—onnection<T>::owner::client, m_context, asio::ip::tcp::socket(m_context), m_qMessagesIn);
 					
 			// Tell the connection object to connect to server
 			m_connection->ConnectToServer(endpoints);
@@ -75,7 +75,7 @@ class client_interface {
 	}
 
 	// Retrieve queue of messages from server
-	tsqueue<owned_message<T>>& Incoming() { return m_qMessagesIn; }
+	tsqueue<tcpOwned_message<T>>& Incoming() { return m_qMessagesIn; }
 
 	protected:
 	// asio context handles the data transfer...
@@ -83,11 +83,11 @@ class client_interface {
 	// ...but needs a thread of its own to execute its work commands
 	std::thread thrContext;
 	// The client has a single instance of a "connection" object, which handles data transfer
-	std::unique_ptr<connection<T>> m_connection;
+	std::unique_ptr<tcp—onnection<T>> m_connection;
 			
 	private:
 	// This is the thread safe queue of incoming messages from server
-	tsqueue<owned_message<T>> m_qMessagesIn;
+	tsqueue<tcpOwned_message<T>> m_qMessagesIn;
 };
 
 } // net

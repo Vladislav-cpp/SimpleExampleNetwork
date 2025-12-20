@@ -98,21 +98,35 @@ namespace net
 
 	// Forward declare the connection
 	template <typename T>
-	class connection;
+	class tcp—onnection;
 
 	template <typename T>
-	struct owned_message
+	struct tcpOwned_message
 	{
-		std::shared_ptr<connection<T>> remote = nullptr;
+		std::shared_ptr<tcp—onnection<T>> remote = nullptr;
 		message<T> msg;
 
 		// Again, a friendly string maker
-		friend std::ostream& operator<<(std::ostream& os, const owned_message<T>& msg)
+		friend std::ostream& operator<<(std::ostream& os, const tcpOwned_message<T>& msg)
 		{
 			os << msg.msg;
 			return os;
 		}
-	};		
+	};
+
+	template <typename T>
+	struct udpOwned_message
+	{
+		asio::ip::udp::endpoint remoteEndpoint;
+		message<T> msg;
+
+		// Again, a friendly string maker
+		friend std::ostream& operator<<(std::ostream& os, const tcpOwned_message<T>& msg)
+		{
+			os << msg.msg;
+			return os;
+		}
+	};
 
 	///[OLC_HEADERIFYIER] END "MESSAGE"
 }
