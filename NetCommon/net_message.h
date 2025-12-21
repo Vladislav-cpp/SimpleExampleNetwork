@@ -117,7 +117,7 @@ namespace net {
 		message<T> msg;
 
 		// Again, a friendly string maker
-		friend std::ostream& operator<<(std::ostream& os, const tcpOwned_message<T>& msg)
+		friend std::ostream& operator<<(std::ostream& os, const udpOwned_message<T>& msg)
 		{
 			os << msg.msg;
 			return os;

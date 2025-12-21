@@ -11,18 +11,17 @@ class udp_server {
 public:
   udp_server(uint16_t nPort) : m_socket(m_asioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), nPort)) {}
 
-private:
     void Start() {
 
-    try {
-        WaitForPacket();
+        try {
+            WaitForPacket();
 
-        m_threadContext = std::thread([this]() { m_asioContext.run(); });
-    }catch (std::exception& e) {
-        std::cerr << "[UDP SERVER] Exception: " << e.what() << "\n";
-    }
+            m_threadContext = std::thread([this]() { m_asioContext.run(); });
+        } catch (std::exception& e) {
+            std::cerr << "[UDP SERVER] Exception: " << e.what() << "\n";
+        }
 
-    std::cout << "[UDP SERVER] Started!\n";
+        std::cout << "[UDP SERVER] Started!\n";
     }
 
     void Stop() {
