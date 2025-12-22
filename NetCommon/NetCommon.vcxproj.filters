@@ -51,5 +51,8 @@
     <ClInclude Include="net_udpServer.h">
       <Filter>Header Files\udp</Filter>
     </ClInclude>
+    <ClInclude Include="net_udpConnection.h">
+      <Filter>Header Files\udp</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

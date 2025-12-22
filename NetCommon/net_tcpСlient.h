@@ -4,12 +4,12 @@
 namespace net {
 
 template <typename T>
-class tcp—lientInterface {
+class tcp_client {
 	public:
-	tcp—lientInterface() 
+	tcp_client() 
 	{}
 
-	virtual ~tcp—lientInterface()
+	virtual ~tcp_client()
 	{
 		// If the client is destroyed, always try and disconnect from server
 		Disconnect();

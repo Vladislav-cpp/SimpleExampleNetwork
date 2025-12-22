@@ -113,7 +113,7 @@ namespace net {
 
 	template <typename T>
 	struct udpOwned_message {
-		std::shared_ptr<asio::ip::udp::endpoint> remoteEndpoint;
+		asio::ip::udp::endpoint remoteEndpoint;
 		message<T> msg;
 
 		// Again, a friendly string maker
@@ -127,27 +127,11 @@ namespace net {
 	template<typename T>
 	struct client_ref {
 		client_ref() = default;
+		client_ref(std::shared_ptr<tcpÑonnection<T>> p) : tcp_ptr(p) {}
+		client_ref(asio::ip::udp::endpoint p) : udp_endpoint(p) {}
 
-		client_ref(std::shared_ptr<tcpÑonnection<T>> p) : ptr(p) {}
-
-		client_ref(std::shared_ptr<asio::ip::udp::endpoint> p) : ptr(p) {}
-
-
-		bool isTcp() const { return ptr.index() == 0; }
-
-		template<typename U>
-		U* as() const {
-			return std::get<std::shared_ptr<U>>(ptr).get();
-		}
-
-		tcpÑonnection<T>* operator->() const {
-			return std::get<0>(ptr).get();
-		}
-
-		std::variant<
-			std::shared_ptr<tcpÑonnection<T>>, 
-			std::shared_ptr<asio::ip::udp::endpoint>
-		> ptr;
+		std::shared_ptr<tcpÑonnection<T>> tcp_ptr;
+		asio::ip::udp::endpoint udp_endpoint;
 	};
 
 

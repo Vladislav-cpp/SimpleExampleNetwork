@@ -12,7 +12,7 @@ enum class CustomMsgTypes : uint32_t
 
 
 
-class CustomClient : public net::tcp—lientInterface<CustomMsgTypes>
+class CustomClient : public net::tcp_client<CustomMsgTypes>
 {
 public:
 	void PingServer()	

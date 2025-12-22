@@ -26,6 +26,7 @@
     <ClInclude Include="net_tcpServer.h" />
     <ClInclude Include="net_tsqueue.h" />
     <ClInclude Include="net_all.h" />
+    <ClInclude Include="net_udpConnection.h" />
     <ClInclude Include="net_udpСlient.h" />
     <ClInclude Include="net_udpServer.h" />
   </ItemGroup>

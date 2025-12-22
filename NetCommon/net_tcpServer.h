@@ -4,7 +4,6 @@
 #include "net_tsqueue.h"
 #include "net_message.h"
 #include "net_tcp—onnection.h"
-#include <vector>
 
 
 namespace net {

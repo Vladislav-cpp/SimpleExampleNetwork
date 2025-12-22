@@ -3,13 +3,18 @@
 #include "net_common.h"
 #include "net_tsqueue.h"
 #include "net_message.h"
+#include "net_udpConnection.h"
 
 namespace net {
 
 template<typename T>
 class udp_server {
 public:
-  udp_server(uint16_t nPort) : m_socket(m_asioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), nPort)) {}
+    udp_server(uint16_t nPort) : m_socket(m_asioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), nPort)) {}
+
+    virtual ~udp_server() {
+        Stop();
+    }
 
     void Start() {
 
@@ -27,44 +32,22 @@ public:
     void Stop() {
         m_asioContext.stop();
 
-        if(m_threadContext.joinable()) m_threadContext.join();
+        if( m_threadContext.joinable() ) m_threadContext.join();
 
         std::cout << "[UDP SERVER] Stopped!\n";
     }
 
-    void SendTo(const asio::ip::udp::endpoint& target, const message<T>& msg) {
-
-        std::vector<uint8_t> buffer(sizeof(message_header<T>) + msg.body.size());
-
-        std::memcpy(buffer.data(), &msg.header, sizeof(message_header<T>));
-
-        if( !msg.body.empty() ) std::memcpy( buffer.data() + sizeof(message_header<T>), msg.body.data(), msg.body.size() );
-
-        m_socket.async_send_to(asio::buffer(buffer.data(), buffer.size()), target,
-            [](std::error_code ec, std::size_t length) {
-                if(ec) std::cout << "[UDP] Send Error: " << ec.message() << "\n";
-            });
+    void SendTo(const asio::ip::udp::endpoint& client, const message<T>& msg) {
+        if(client) {
+            client->Send(msg);
+        }
     }
 
     void MessageAll(const message<T>& msg, const asio::ip::udp::endpoint& ignoreClient = asio::ip::udp::endpoint()) {
-        auto sharedBuffer = std::make_shared<std::vector<uint8_t>>(sizeof(message_header<T>) + msg.body.size());
-    
-        std::memcpy(sharedBuffer->data(), &msg.header, sizeof(message_header<T>));
-
-        if(!msg.body.empty()) std::memcpy(sharedBuffer->data() + sizeof(message_header<T>), msg.body.data(), msg.body.size());
-
-        for(const auto& client : m_clients) {
+        for(auto& [endpoint, client] : m_clients) {
             if(client == ignoreClient) continue;
 
-            m_socket.async_send_to(asio::buffer(sharedBuffer->data(), sharedBuffer->size()), client,
-                [sharedBuffer](std::error_code ec, std::size_t length) {
-
-                    if(ec) {
-                        std::cout << "[UDP] Removing dead client: " << client << " Reason: " << ec.message() << "\n";
-                        this->m_clients.erase(client);
-                    }
-                });
-            
+            client->Send(msg);
         }
     }
 
@@ -91,50 +74,31 @@ protected:
 
 private:
     void WaitForPacket() {
-        auto vBuffer = std::make_shared<std::vector<uint8_t>>(1024);
 
-        if( !m_remoteEndpoint ) m_remoteEndpoint = std::make_shared<asio::ip::udp::endpoint>();
+        auto vBuffer = std::make_shared<std::vector<uint8_t>>(1500); 
 
+        auto tempEndpoint = std::make_shared<asio::ip::udp::endpoint>();
 
-        m_socket.async_receive_from(
-            asio::buffer(vBuffer->data(), vBuffer->size()), *m_remoteEndpoint,
-            [this, vBuffer](std::error_code ec, std::size_t length) {
-                if(!ec) {
-
-                    if (m_clients.find(*m_remoteEndpoint) == m_clients.end()) {
-                        std::cout << "[UDP] New client: " << *m_remoteEndpoint << "\n";
-                        m_clients.insert(*m_remoteEndpoint);
-                    }
-
-                    message<T> msg;
-
-                    size_t headerSize = sizeof(message_header<T>);
-
-                    if(length >= headerSize) {
-                        std::memcpy(&msg.header, vBuffer->data(), headerSize);
-
-                        size_t actual_body_length = length - headerSize;
-
-                        if(msg.header.size == actual_body_length) {
-        
-                            msg.body.resize(actual_body_length);
-                            std::memcpy(msg.body.data(), vBuffer->data() + headerSize, actual_body_length);
-
-                            m_qMessagesIn.push_back({ m_remoteEndpoint, msg });
-
-                        } else {
-                            std::cout << "[UDP SERVER] Warning: Packet size mismatch! Header says: " << msg.header.size << " Actual: " << actual_body_length << "\n";
+        m_socket.async_receive_from(asio::buffer(vBuffer->data(), vBuffer->size()), *tempEndpoint,
+                [this, vBuffer, tempEndpoint](std::error_code ec, std::size_t length) {
+                    if(!ec) {
+                        auto& conn = m_clients[*tempEndpoint];
+                        if(!conn) { 
+                            conn = std::make_shared<udpConnection<T>>(
+                                udpConnection<T>::owner::server, 
+                                m_socket, 
+                                tempEndpoint, 
+                                m_qMessagesIn
+                            );
                         }
-                    
 
+                        conn->OnDataReceived(vBuffer, length);
+            
+                        WaitForPacket();
+                    } else {
+                        std::cout << "[UDP Server] WaitForPacket Error: " << ec.message() << "\n";
                     }
-
-                } else {
-                    std::cout << "[UDP SERVER] New Connection Error: " << ec.message() << "\n";
-                }
-
-                WaitForPacket(); 
-            });
+                });
     }
 
 protected:
@@ -144,9 +108,8 @@ protected:
     std::thread m_threadContext;
 
     asio::ip::udp::socket m_socket;
-    std::shared_ptr<asio::ip::udp::endpoint> m_remoteEndpoint;
 
-    std::set<asio::ip::udp::endpoint> m_clients;
+    std::map<asio::ip::udp::endpoint, std::shared_ptr<udpConnection<T>>> m_clients;
 
 };
 

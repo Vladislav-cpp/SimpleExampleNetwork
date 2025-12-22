@@ -1,6 +1,6 @@
 #pragma once
-#include <thread>
 #include "net_common.h"
+#include "net_udpConnection.h"
 
 namespace net {
 
@@ -19,7 +19,10 @@ public:
 
         try {
             asio::ip::udp::resolver resolver(m_asioContext);
-            m_serverEndpoint = *resolver.resolve(host, std::to_string(port)).begin();
+            asio::ip::udp::endpoint serverEndpoint = *resolver.resolve(host, std::to_string(port)).begin();
+
+
+            m_connection = std::make_shared<udpConnection<T>>( udpConnection<T>::owner::client, m_socket, serverEndpoint, m_qMessagesIn );
 
             m_threadContext = std::thread([this]() { m_asioContext.run(); });
 
@@ -34,20 +37,12 @@ public:
 
     void Disconnect() {
         m_asioContext.stop();
-        if (m_threadContext.joinable()) m_threadContext.join();
+
+        if( m_threadContext.joinable() ) m_threadContext.join();
     }
 
     void Send(const message<T>& msg) {
-        auto buffer = std::make_shared<std::vector<uint8_t>>(sizeof(message_header<T>) + msg.body.size());
-        std::memcpy(buffer->data(), &msg.header, sizeof(message_header<T>));
-        if(!msg.body.empty()) {
-            std::memcpy(buffer->data() + sizeof(message_header<T>), msg.body.data(), msg.body.size());
-        }
-
-        m_socket.async_send_to(asio::buffer(buffer->data(), buffer->size()), m_serverEndpoint,
-            [buffer](std::error_code ec, std::size_t length) {
-                if(ec) std::cout << "[UDP CLIENT] Send Error: " << ec.message() << "\n";
-            });
+        if(m_connection) m_connection->Send(msg);
     }
 
     tsqueue<udpOwned_message<T>>& Incoming() {
@@ -56,36 +51,22 @@ public:
 
 private:
     void WaitForPacket() {
-        auto vBuffer = std::make_shared<std::vector<uint8_t>>(1500);
 
-        m_socket.async_receive_from(
-            asio::buffer(vBuffer->data(), vBuffer->size()), m_fromServerEndpoint,
-            [this, vBuffer](std::error_code ec, std::size_t length) {
-                if(!ec) {
-                    message<T> msg;
-                    size_t headerSize = sizeof(message_header<T>);
+        auto vBuffer = std::make_shared<std::vector<uint8_t>>(1500); 
 
-                    if(length >= headerSize) {
-                        std::memcpy(&msg.header, vBuffer->data(), headerSize);
-                        size_t bodySize = length - headerSize;
+        auto tempEndpoint = std::make_shared<asio::ip::udp::endpoint>();
 
-                        if(msg.header.size == bodySize) {
-
-                            if(bodySize > 0) {
-                                msg.body.resize(bodySize);
-                                std::memcpy(msg.body.data(), vBuffer->data() + headerSize, bodySize);
-                            }
-
-                            m_qMessagesIn.push_back({ m_fromServerEndpoint, msg });
-                        }
+        m_socket.async_receive_from(asio::buffer(vBuffer->data(), vBuffer->size()), tempEndpoint,
+                [this, vBuffer](std::error_code ec, std::size_t length) {
+                    if(!ec) {
+                        // У клієнта зазвичай один m_connection до сервера
+                        m_connection->OnDataReceived(vBuffer, length);
+            
+                        WaitForPacket();
+                    } else {
+                        std::cout << "[UDP Client] WaitForPacket Error: " << ec.message() << "\n";
                     }
-
-                    WaitForPacket();
-
-                } else {
-                    std::cout << "[UDP CLIENT] WaitForPacket Error: " << ec.message() << "\n";
-                }
-            });
+                });
     }
 
 private:
@@ -93,10 +74,9 @@ private:
     std::thread m_threadContext;
     asio::ip::udp::socket m_socket;
     
-    asio::ip::udp::endpoint m_serverEndpoint;     // Адреса сервера
-    asio::ip::udp::endpoint m_fromServerEndpoint; // Буфер для отримання адреси
+    std::shared_ptr<udpConnection<T>> m_connection;
     
-    tsqueue<udpOwned_message<T>> m_qMessagesIn; // Черга вхідних
+    tsqueue<udpOwned_message<T>> m_qMessagesIn;
 };
 
 } // net
