@@ -18,15 +18,29 @@ public:
     bool Start(const std::string& host, const uint16_t port) {
 
         try {
+
+            if(!m_socket.is_open()) {
+                std::error_code ec_open;
+                m_socket.open(asio::ip::udp::v4(), ec_open);
+
+                m_socket.bind(asio::ip::udp::endpoint(asio::ip::udp::v4(), 0));
+            
+                if(ec_open) {
+                    std::cout << "[UDP CLIENT] socket open Error: " << ec_open.message() << "\n";
+                    return false;
+                }
+
+                std::cout << "[UDP CLIENT] socket open successfully .\n";
+            }
             asio::ip::udp::resolver resolver(m_asioContext);
             asio::ip::udp::endpoint serverEndpoint = *resolver.resolve(host, std::to_string(port)).begin();
 
 
             m_connection = std::make_shared<udpConnection<T>>( udpConnection<T>::owner::client, m_socket, serverEndpoint, m_qMessagesIn );
 
-            m_threadContext = std::thread([this]() { m_asioContext.run(); });
-
             WaitForPacket();
+
+            m_threadContext = std::thread([this]() { m_asioContext.run(); });
 
             return true;
         } catch (std::exception& ec) {
@@ -52,19 +66,26 @@ public:
 private:
     void WaitForPacket() {
 
-        auto vBuffer = std::make_shared<std::vector<uint8_t>>(1500); 
+        auto vBuffer = std::make_shared<std::vector<uint8_t>>(10000); 
 
-        auto tempEndpoint = std::make_shared<asio::ip::udp::endpoint>();
-
-        m_socket.async_receive_from(asio::buffer(vBuffer->data(), vBuffer->size()), tempEndpoint,
+        m_socket.async_receive_from(asio::buffer(vBuffer->data(), vBuffer->size()), m_tempEndpoint,
                 [this, vBuffer](std::error_code ec, std::size_t length) {
                     if(!ec) {
-                        // У клієнта зазвичай один m_connection до сервера
                         m_connection->OnDataReceived(vBuffer, length);
             
                         WaitForPacket();
                     } else {
+                        if(ec == asio::error::message_size) std::cerr << "[UDP Client] Пакет занадто великий! Дані обрізано.\n";
                         std::cout << "[UDP Client] WaitForPacket Error: " << ec.message() << "\n";
+                        std::cout << "[DEBUG] Is Open: " << m_socket.is_open() << "\n";
+                        std::error_code ec_local;
+                        auto local_ep = m_socket.local_endpoint(ec_local);
+                        if (ec_local) std::cout << "[DEBUG] Local EP Error: " << ec_local.message() << "\n";
+                        else std::cout << "[DEBUG] Local Port: " << local_ep.port() << "\n";
+
+
+
+                        std::cout << "[DEBUG] Is Open: " << m_socket.is_open() << "\n";
                     }
                 });
     }
@@ -77,6 +98,7 @@ private:
     std::shared_ptr<udpConnection<T>> m_connection;
     
     tsqueue<udpOwned_message<T>> m_qMessagesIn;
+    asio::ip::udp::endpoint m_tempEndpoint;
 };
 
 } // net

@@ -112,8 +112,11 @@ namespace net {
 	};
 
 	template <typename T>
+	class udpConnection;
+
+	template <typename T>
 	struct udpOwned_message {
-		asio::ip::udp::endpoint remoteEndpoint;
+		std::shared_ptr<udpConnection<T>> remoteEndpoint = nullptr;
 		message<T> msg;
 
 		// Again, a friendly string maker
@@ -124,14 +127,17 @@ namespace net {
 		}
 	};
 
+
+
+
 	template<typename T>
 	struct client_ref {
-		client_ref() = default;
-		client_ref(std::shared_ptr<tcpÑonnection<T>> p) : tcp_ptr(p) {}
-		client_ref(asio::ip::udp::endpoint p) : udp_endpoint(p) {}
+		explicit client_ref() = default;
+		explicit client_ref(std::shared_ptr<tcpÑonnection<T>> p) : tcp_ptr(p) {}
+		explicit client_ref(std::shared_ptr<udpConnection<T>> p) : udp_ptr(p) {}
 
 		std::shared_ptr<tcpÑonnection<T>> tcp_ptr;
-		asio::ip::udp::endpoint udp_endpoint;
+		std::shared_ptr<udpConnection<T>> udp_ptr;
 	};
 
 

@@ -45,7 +45,7 @@ public:
 
     void MessageAll(const message<T>& msg, const asio::ip::udp::endpoint& ignoreClient = asio::ip::udp::endpoint()) {
         for(auto& [endpoint, client] : m_clients) {
-            if(client == ignoreClient) continue;
+            if(endpoint == ignoreClient) continue;
 
             client->Send(msg);
         }
@@ -67,27 +67,25 @@ public:
 
 protected:
 
-    virtual void OnMessage(const asio::ip::udp::endpoint& client, message<T>& msg) {}
+    virtual void OnMessage(const std::shared_ptr<udpConnection<T>> client, message<T>& msg) {}
 
 	virtual void OnMessage(const client_ref<T>& client, message<T>& msg) {}
 
 
-private:
+protected:
     void WaitForPacket() {
 
         auto vBuffer = std::make_shared<std::vector<uint8_t>>(1500); 
 
-        auto tempEndpoint = std::make_shared<asio::ip::udp::endpoint>();
-
-        m_socket.async_receive_from(asio::buffer(vBuffer->data(), vBuffer->size()), *tempEndpoint,
-                [this, vBuffer, tempEndpoint](std::error_code ec, std::size_t length) {
+        m_socket.async_receive_from(asio::buffer(vBuffer->data(), vBuffer->size()), m_tempEndpoint,
+                [this, vBuffer](std::error_code ec, std::size_t length) {
                     if(!ec) {
-                        auto& conn = m_clients[*tempEndpoint];
+                        auto& conn = m_clients[m_tempEndpoint];
                         if(!conn) { 
                             conn = std::make_shared<udpConnection<T>>(
                                 udpConnection<T>::owner::server, 
                                 m_socket, 
-                                tempEndpoint, 
+                                m_tempEndpoint, 
                                 m_qMessagesIn
                             );
                         }
@@ -101,7 +99,7 @@ private:
                 });
     }
 
-protected:
+private:
     tsqueue<udpOwned_message<T>> m_qMessagesIn;
 
     asio::io_context m_asioContext;
@@ -109,8 +107,8 @@ protected:
 
     asio::ip::udp::socket m_socket;
 
-    std::map<asio::ip::udp::endpoint, std::shared_ptr<udpConnection<T>>> m_clients;
-
+    std::map<asio::ip::udp::udp::endpoint, std::shared_ptr<udpConnection<T>>> m_clients;
+    asio::ip::udp::endpoint m_tempEndpoint;
 };
 
 } // net

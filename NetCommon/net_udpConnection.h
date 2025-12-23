@@ -17,12 +17,16 @@ public:
 
 public:
     udpConnection(owner parent, asio::ip::udp::socket& sock, asio::ip::udp::endpoint endp, tsqueue<udpOwned_message<T>>& qIn)
-                    : m_socket(sock), m_remoteEndpoint(endp), m_qMessagesIn(qIn) {
+                    : m_socket(sock), m_qMessagesIn(qIn) {
 
-            m_OwnerType = parent;
-        }
+        m_remoteEndpoint = std::make_shared<asio::ip::udp::endpoint>(endp);
+        m_OwnerType = parent;
+    }
 
     uint32_t GetID() const { return m_id; }
+
+    void SetID(uint32_t id) const { m_id = id; }
+    void SetID(uint32_t id) { m_id = id; }
 
     void Send(const message<T>& msg) {
         auto buffer = std::make_shared<std::vector<uint8_t>>(sizeof(message_header<T>) + msg.body.size());
@@ -33,13 +37,14 @@ public:
             std::memcpy(buffer->data() + sizeof(message_header<T>), msg.body.data(), msg.body.size());
         }
 
-        // Захоплюємо 'buffer' за значенням, щоб збільшити counter shared_ptr
         m_socket.async_send_to(
             asio::buffer(buffer->data(), buffer->size()), 
-            m_remoteEndpoint,
+            *m_remoteEndpoint,
             [buffer](std::error_code ec, std::size_t length) {
                 if(ec) {
                     std::cout << "[UDP CONNECTION] Send Error: " << ec.message() << "\n";
+                } else {
+                    //std::cout << "[UDP CONNECTION] Send successfully: " << "\n";
                 }
             }
         );
@@ -60,8 +65,13 @@ public:
                     msg.body.resize(bodySize);
                     std::memcpy(msg.body.data(), vBuffer->data() + headerSize, bodySize);
                 }
+                
+                udpOwned_message<T> udpMsg;
+                udpMsg.msg = msg;
+                udpMsg.remoteEndpoint = this->shared_from_this();
 
-                m_qMessagesIn.push_back({ m_remoteEndpoint, msg });
+                m_qMessagesIn.push_back(udpMsg);
+
             } else {
                 std::cout << "[UDP CONNECTION] Size mismatch! Header: " << msg.header.size << " Actual: " << bodySize << "\n";
             }
@@ -75,7 +85,7 @@ private:
     uint32_t m_id = 0;
 
     asio::ip::udp::socket& m_socket;
-    asio::ip::udp::endpoint m_remoteEndpoint;
+    std::shared_ptr<asio::ip::udp::endpoint> m_remoteEndpoint;
 };
 
 } // net

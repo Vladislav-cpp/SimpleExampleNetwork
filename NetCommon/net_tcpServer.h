@@ -166,6 +166,8 @@ class tcp_server {
 			auto msg = m_qMessagesIn.pop_front();
 
 			// Pass to message handler
+			
+			//std::cout << "msg.msg.size() - > " << msg.msg.size() << std::endl;
 			OnMessage(msg.remote, msg.msg);
 			OnMessage(client_ref<T>(msg.remote), msg.msg);
 

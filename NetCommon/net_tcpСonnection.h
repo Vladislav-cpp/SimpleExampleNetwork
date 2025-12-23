@@ -124,7 +124,7 @@ private:
 				if(!ec) {
 					// ... no error, so check if the message header just sent also
 					// has a message body...
-					if (m_qMessagesOut.front().body.size() > 0) {
+					if(m_qMessagesOut.front().body.size() > 0) {
 						// ...it does, so issue the task to write the body bytes
 						WriteBody();
 					} else {
@@ -134,8 +134,7 @@ private:
 
 						// If the queue is not empty, there are more messages to send, so
 						// make this happen by issuing the task to send the next header.
-						if (!m_qMessagesOut.empty())
-						{
+						if( !m_qMessagesOut.empty() ) {
 							WriteHeader();
 						}
 					}
@@ -160,21 +159,17 @@ private:
 		asio::async_write(m_socket, asio::buffer(m_qMessagesOut.front().body.data(), m_qMessagesOut.front().body.size()),
 			[this](std::error_code ec, std::size_t length)
 			{
-				if (!ec)
-				{
+				if(!ec) {
 					// Sending was successful, so we are done with the message
 					// and remove it from the queue
 					m_qMessagesOut.pop_front();
 
 					// If the queue still has messages in it, then issue the task to 
 					// send the next messages' header.
-					if (!m_qMessagesOut.empty())
-					{
+					if( !m_qMessagesOut.empty() ) {
 						WriteHeader();
 					}
-				}
-				else
-				{
+				} else {
 					// Sending failed, see WriteHeader() equivalent for description :P
 					std::cout << "[" << id << "] Write Body Fail.\n";
 					std::cout << ec.message() << "\n";
