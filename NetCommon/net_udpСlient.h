@@ -83,9 +83,6 @@ private:
                         if (ec_local) std::cout << "[DEBUG] Local EP Error: " << ec_local.message() << "\n";
                         else std::cout << "[DEBUG] Local Port: " << local_ep.port() << "\n";
 
-
-
-                        std::cout << "[DEBUG] Is Open: " << m_socket.is_open() << "\n";
                     }
                 });
     }

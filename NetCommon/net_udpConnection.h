@@ -78,6 +78,13 @@ public:
         }
     }
 
+public:
+    bool IsTimedOut(float timeoutSeconds) const {
+        auto now = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - m_lastReceivedTime).count();
+        return duration >= timeoutSeconds;
+    }
+
 private:
     tsqueue<udpOwned_message<T>>& m_qMessagesIn;
 
@@ -86,6 +93,8 @@ private:
 
     asio::ip::udp::socket& m_socket;
     std::shared_ptr<asio::ip::udp::endpoint> m_remoteEndpoint;
+
+    std::chrono::steady_clock::time_point m_lastReceivedTime;
 };
 
 } // net

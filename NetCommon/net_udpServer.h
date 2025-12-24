@@ -92,10 +92,12 @@ protected:
 
                         conn->OnDataReceived(vBuffer, length);
             
-                        WaitForPacket();
                     } else {
                         std::cout << "[UDP Server] WaitForPacket Error: " << ec.message() << "\n";
+                        if( !m_socket.is_open() ) return;
                     }
+
+                    WaitForPacket();
                 });
     }
 
