@@ -44,6 +44,7 @@ public:
     }
 
     void MessageAll(const message<T>& msg, const asio::ip::udp::endpoint& ignoreClient = asio::ip::udp::endpoint()) {
+        std::lock_guard<std::mutex> lock(m_muxClients);
         for(auto& [endpoint, client] : m_clients) {
             if(endpoint == ignoreClient) continue;
 
@@ -52,6 +53,23 @@ public:
     }
 
     void Update(size_t nMaxMessages = -1, bool bWait = false) {
+        {
+            std::lock_guard<std::mutex> lock(m_muxClients);
+            for (auto it = m_clients.begin(); it != m_clients.end(); ) {
+                if (it->second->IsTimedOut(10.0f)) {
+                    std::cout << "[UDP Server] Client " << it->second->GetID() << " timed out.\n";
+                
+                    //OnClientDisconnect(it->second);
+                
+                    it = m_clients.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+        }
+
+
+
         if(bWait) m_qMessagesIn.wait();
 
         size_t nMessageCount = 0;
@@ -80,7 +98,10 @@ protected:
         m_socket.async_receive_from(asio::buffer(vBuffer->data(), vBuffer->size()), m_tempEndpoint,
                 [this, vBuffer](std::error_code ec, std::size_t length) {
                     if(!ec) {
+
+                        std::lock_guard<std::mutex> lock(m_muxClients);
                         auto& conn = m_clients[m_tempEndpoint];
+
                         if(!conn) { 
                             conn = std::make_shared<udpConnection<T>>(
                                 udpConnection<T>::owner::server, 
@@ -109,6 +130,7 @@ private:
 
     asio::ip::udp::socket m_socket;
 
+    std::mutex m_muxClients;
     std::map<asio::ip::udp::udp::endpoint, std::shared_ptr<udpConnection<T>>> m_clients;
     asio::ip::udp::endpoint m_tempEndpoint;
 };

@@ -21,6 +21,8 @@ public:
 
         m_remoteEndpoint = std::make_shared<asio::ip::udp::endpoint>(endp);
         m_OwnerType = parent;
+
+        m_lastReceivedTime = std::chrono::steady_clock::now();
     }
 
     uint32_t GetID() const { return m_id; }
@@ -71,6 +73,8 @@ public:
                 udpMsg.remoteEndpoint = this->shared_from_this();
 
                 m_qMessagesIn.push_back(udpMsg);
+        
+                m_lastReceivedTime = std::chrono::steady_clock::now();
 
             } else {
                 std::cout << "[UDP CONNECTION] Size mismatch! Header: " << msg.header.size << " Actual: " << bodySize << "\n";
