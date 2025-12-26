@@ -127,6 +127,20 @@ class tcp_server {
 			m_deqConnections.erase( std::remove(m_deqConnections.begin(), m_deqConnections.end(), client), m_deqConnections.end() );
 		}
 	}
+
+
+	void MessageClient(uint32_t nID, const message<T>& msg) {
+		std::shared_ptr<tcpÑonnection<T>> clientToMessage = nullptr;
+
+		for(auto& client : m_deqConnections) {
+			if(client && client->GetID() == nID) {
+				clientToMessage = client;
+				break;
+			}
+		}
+
+		MessageClient(clientToMessage, msg);
+	}
 			
 	// Send message to all clients
 	void MessageAllClients(const message<T>& msg, std::shared_ptr<tcpÑonnection<T>> pIgnoreClient = nullptr) {
