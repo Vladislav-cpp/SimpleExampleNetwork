@@ -71,6 +71,10 @@ class tcp_server {
 			{
 				// Triggered by incoming connection request
 				if(!ec) {
+
+					// Disable Nagle's algorithm
+					socket.set_option(asio::ip::tcp::no_delay(true));
+
 					// Display some useful(?) information
 					std::cout << "[SERVER] New Connection: " << socket.remote_endpoint() << "\n";
 
@@ -79,24 +83,34 @@ class tcp_server {
 						std::make_shared<tcp—onnection<T>>(tcp—onnection<T>::owner::server, 
 							m_asioContext, std::move(socket), m_qMessagesIn);
 							
-							
 
-					// Give the user server a chance to deny connection
-					if( OnClientConnect(newconn) ) {								
+					/////////////////////////////// TEMPORARY
 						// Connection allowed, so add to container of new connections
-						m_deqConnections.push_back(std::move(newconn));
 
 						// And very important! Issue a task to the connection's
 						// asio context to sit and wait for bytes to arrive!
-						m_deqConnections.back()->ConnectToClient(nIDCounter++);
+
+					// Give the user server a chance to deny connection
+
+					newconn->SetID(++nIDCounter);
+
+					if( OnClientConnect(newconn) ) {								
+
+						m_deqConnections.push_back( std::move(newconn) );
+
+						m_deqConnections.back()->ConnectToClient();
 
 						std::cout << "[" << m_deqConnections.back()->GetID() << "] Connection Approved\n";
 					} else {
+						--nIDCounter;
 						std::cout << "[-----] Connection Denied\n";
 
 						// Connection will go out of scope with no pending tasks, so will
 						// get destroyed automagically due to the wonder of smart pointers
 					}
+
+
+
 				} else {
 					// Error has occurred during acceptance
 					std::cout << "[SERVER] New Connection Error: " << ec.message() << "\n";

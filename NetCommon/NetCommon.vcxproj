@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="net_connectionState.h" />
     <ClInclude Include="net_tcpСlient.h" />
     <ClInclude Include="net_common.h" />
     <ClInclude Include="net_tcpСonnection.h" />

@@ -3,6 +3,7 @@
 #include "net_common.h"
 #include "net_tsqueue.h"
 #include "net_message.h"
+#include "net_connectionState.h"
 #include <Windows.h>
 
 namespace net {
@@ -34,27 +35,38 @@ public:
 		return id;
 	}
 
-public:
-	void ConnectToClient(uint32_t uid = 0) {
-		if(m_nOwnerType != owner::server || !IsConnected()) return;
-
+	void SetID(uint32_t uid) {
 		id = uid;
-		ReadHeader();
-
 	}
 
-	void ConnectToServer(const asio::ip::tcp::resolver::results_type& endpoints) {
+public:
+	void ConnectToClient() {
+		if(m_nOwnerType != owner::server || !IsConnected()) return;
+
+		ReadHeader();
+	}
+
+	void ConnectToServer(const asio::ip::tcp::resolver::results_type& endpoints,
+						  std::atomic<ConnectionState>* pState,
+						  std::string* pLastError) {
+
 		// Only clients can connect to servers
 		if(m_nOwnerType != owner::client) return;
 
 		// Request asio attempts to connect to an endpoint
 		asio::async_connect(m_socket, endpoints,
-			[this](std::error_code ec, asio::ip::tcp::endpoint endpoint) {
+			[this, pState, pLastError](std::error_code ec, asio::ip::tcp::endpoint endpoint) {
 				if(!ec) {
+
 					m_bConnected = true;
 					ReadHeader(); 
-					std::cout << "ReadHeader()" << std::endl; 
+					std::cout << "ReadHeader()" << std::endl;
+					
+					//OnConnectSuccess();
+					if( pState ) pState->store(ConnectionState::Connected);
+
 				} else {
+
 					//std::cout << ec.message() << std::endl;
 					std::cout << "Error code: " << ec.value() << "\n";
 					std::string msg_utf8 = ec.message();  // отримуємо повідомлення як UTF-8
@@ -65,7 +77,11 @@ public:
 						
 					std::cout << "socket is_open=" << m_socket.is_open() << "\n";
 					std::cout << "context stopped=" << m_asioContext.stopped() << "\n";
-					std::cout << "async_connect ConnectToServer error" << std::endl; 
+					std::cout << "async_connect ConnectToServer error" << std::endl;
+
+					//OnConnectFail();
+					if( pLastError ) *pLastError = ec.message();
+					if( pState ) pState->store(ConnectionState::Failed);
 				}
 			});
 	}

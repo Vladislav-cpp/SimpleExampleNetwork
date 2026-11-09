@@ -54,5 +54,8 @@
     <ClInclude Include="net_udpConnection.h">
       <Filter>Header Files\udp</Filter>
     </ClInclude>
+    <ClInclude Include="net_connectionState.h">
+      <Filter>Header Files\Common</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
